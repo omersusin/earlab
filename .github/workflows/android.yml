@@ -1,0 +1,63 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.8.0'
+      - name: Set up Android SDK
+        run: |
+          sdk_root="$RUNNER_TEMP/android-sdk"
+          mkdir -p "$sdk_root/cmdline-tools"
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o "$RUNNER_TEMP/clt.zip"
+          unzip -q "$RUNNER_TEMP/clt.zip" -d "$sdk_root/cmdline-tools"
+          mv "$sdk_root/cmdline-tools/cmdline-tools" "$sdk_root/cmdline-tools/latest"
+          yes | "$sdk_root/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$sdk_root" 'platforms;android-36' 'build-tools;36.0.0' > /dev/null
+          {
+            echo "ANDROID_HOME=$sdk_root"
+            echo "ANDROID_SDK_ROOT=$sdk_root"
+          } >> "$GITHUB_ENV"
+      - name: Lint and debug APK
+        run: gradle --no-daemon :app:lintDebug :app:assembleDebug
+      - name: Release APK (R8 + signed, if keystore present)
+        if: github.event_name != 'pull_request'
+        run: |
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "No keystore secrets — skipping signed release."
+            exit 0
+          fi
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/earlab-release.jks"
+          gradle --no-daemon :app:assembleRelease
+        env:
+          EARLAB_KEYSTORE: ${{ runner.temp }}/earlab-release.jks
+          EARLAB_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          EARLAB_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          EARLAB_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: earlab-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
