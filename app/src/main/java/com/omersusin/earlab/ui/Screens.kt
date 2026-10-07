@@ -79,7 +79,7 @@ class LabViewModel : ViewModel() {
     var freq by mutableStateOf(20f); private set
     var sweeping by mutableStateOf(false); private set
     var noiseOn by mutableStateOf(false); private set
-    var noiseKind by mutableStateOf(true); private set // true = pink
+    var noiseKind by mutableStateOf(true)
     var noiseSecsLeft by mutableIntStateOf(0); private set
     private var timer: Job? = null
 
@@ -175,7 +175,7 @@ private fun SweepArc(freq: Float, modifier: Modifier = Modifier) {
         val stroke = d * 0.09f
         val box = d - stroke
         val tl = Offset((size.width - box) / 2, (size.height - box) / 2)
-        val style = Stroke(stroke, StrokeCap.Round)
+        val style = Stroke(width = stroke, cap = StrokeCap.Round)
         drawArc(track, 135f, 270f, false, topLeft = tl, size = Size(box, box), style = style)
         drawArc(color, 135f, 270f * frac, false, topLeft = tl, size = Size(box, box), style = style)
     }
