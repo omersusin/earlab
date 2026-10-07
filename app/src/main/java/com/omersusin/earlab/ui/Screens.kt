@@ -1,6 +1,7 @@
-package com.omersusin.mochi.ui
+package com.omersusin.earlab.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -168,10 +170,14 @@ private fun SweepArc(freq: Float, modifier: Modifier = Modifier) {
     val frac = (log10(freq / 20f) / 3f).coerceIn(0f, 1f)
     val color = MaterialTheme.colorScheme.primary
     val track = MaterialTheme.colorScheme.surfaceContainerHighest
-    Canvas(modifier) {
-        val w = size.width
-        drawArc(track, 135f, 270f, false, Offset(w / 2, w / 2), w / 2, Stroke(w * 0.09f, StrokeCap.Round))
-        drawArc(color, 135f, 270f * frac, false, Offset(w / 2, w / 2), w / 2, Stroke(w * 0.09f, StrokeCap.Round))
+    Canvas(modifier.aspectRatio(1f)) {
+        val d = size.minDimension
+        val stroke = d * 0.09f
+        val box = d - stroke
+        val tl = Offset((size.width - box) / 2, (size.height - box) / 2)
+        val style = Stroke(stroke, StrokeCap.Round)
+        drawArc(track, 135f, 270f, false, topLeft = tl, size = Size(box, box), style = style)
+        drawArc(color, 135f, 270f * frac, false, topLeft = tl, size = Size(box, box), style = style)
     }
 }
 
